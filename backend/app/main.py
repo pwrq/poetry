@@ -99,75 +99,114 @@ class ContestSession:
 
 session = ContestSession()
 
+# Ordered fallback chain for Romano's model when rate-limited.
+# Tried in sequence until one works or all are exhausted.
+_ORGANIZER_FALLBACK_CHAIN = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "mistralai/mistral-small-3.1-24b-instruct:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "anthropic/claude-3.5-haiku",
+]
+
+
+def _next_organizer_model(current: str, tried: set[str]) -> str | None:
+    """Return the next untried model from the fallback chain, or None if all exhausted."""
+    for m in _ORGANIZER_FALLBACK_CHAIN:
+        if m not in tried:
+            return m
+    return None
+
 
 # ── Graph runner ──────────────────────────────────────────────────────────────
 
 async def run_graph():
-    """Run the contest graph, streaming custom events to all WebSocket clients."""
-    session.running = True
-    input_or_command: dict | Command = session.initial_state
+    """Run the contest graph, streaming custom events to all WebSocket clients.
 
-    try:
-        while True:
-            interrupted = False
-            async for mode, chunk in session.graph.astream(
-                input_or_command,
-                config=session.config,
-                stream_mode=["updates", "custom"],
-            ):
-                if mode == "custom":
-                    payload = chunk
-                    # Tag with server timestamp if missing
-                    if payload.get("type") == "agent_message" and "data" in payload:
-                        payload["data"].setdefault(
-                            "timestamp",
-                            datetime.now(timezone.utc).strftime("%H:%M:%S")
-                        )
-                    session.message_history.append(payload)
-                    await manager.broadcast(payload)
+    Automatically retries with the next model in _ORGANIZER_FALLBACK_CHAIN
+    if Romano's model is rate-limited (429). Resets and restarts from scratch
+    on each retry so state is clean.
+    """
+    import re as _re
+    tried_models: set[str] = set()
 
-                    # Keep local agent_configs in sync when tools emit config_sync
-                    if payload.get("type") == "config_sync" and "data" in payload:
-                        cfg = payload["data"]
-                        agent_id = cfg.get("id")
-                        if agent_id:
-                            session.agent_configs[agent_id] = cfg
+    while True:
+        session.running = True
+        input_or_command: dict | Command = session.initial_state
 
-                elif mode == "updates":
-                    if "__interrupt__" in chunk:
-                        interrupted = True
-                        resume_payload = await session.wait_for_resume()
-                        input_or_command = Command(resume=resume_payload)
-                        break  # restart astream loop with resume command
+        try:
+            while True:
+                interrupted = False
+                async for mode, chunk in session.graph.astream(
+                    input_or_command,
+                    config=session.config,
+                    stream_mode=["updates", "custom"],
+                ):
+                    if mode == "custom":
+                        payload = chunk
+                        if payload.get("type") == "agent_message" and "data" in payload:
+                            payload["data"].setdefault(
+                                "timestamp",
+                                datetime.now(timezone.utc).strftime("%H:%M:%S")
+                            )
+                        session.message_history.append(payload)
+                        await manager.broadcast(payload)
 
-            if not interrupted:
-                break  # graph reached END naturally
+                        if payload.get("type") == "config_sync" and "data" in payload:
+                            cfg = payload["data"]
+                            agent_id = cfg.get("id")
+                            if agent_id:
+                                session.agent_configs[agent_id] = cfg
 
-    except asyncio.CancelledError:
-        pass
-    except Exception as exc:
-        error_str = str(exc)
-        if "429" in error_str:
-            import re as _re
-            m = _re.search(r"([\w/.\-:]+(?::free)?)\s+is temporarily rate.limited", error_str)
-            rl_model = m.group(1) if m else "the current model"
-            fallback = settings.default_model
-            org = session.agent_configs.get("organizer", {})
-            if org.get("model", "") == rl_model:
-                org["model"] = fallback
-                await manager.broadcast({"type": "config_sync", "data": org})
-            await manager.broadcast({"type": "error", "data": {
-                "message": (
-                    f"Rate limited on {rl_model}. "
-                    f"Romano switched to {fallback}. "
-                    f"Reset and start again."
-                )
-            }})
-        else:
-            logger.exception("Graph error: %s", exc)
-            await manager.broadcast({"type": "error", "data": {"message": str(exc)}})
-    finally:
-        session.running = False
+                    elif mode == "updates":
+                        if "__interrupt__" in chunk:
+                            interrupted = True
+                            resume_payload = await session.wait_for_resume()
+                            input_or_command = Command(resume=resume_payload)
+                            break
+
+                if not interrupted:
+                    break  # graph reached END naturally
+
+            break  # contest finished successfully
+
+        except asyncio.CancelledError:
+            break
+
+        except Exception as exc:
+            error_str = str(exc)
+            if "429" in error_str:
+                m = _re.search(r"([\w/.\-:]+(?::free)?)\s+is temporarily rate.limited", error_str)
+                rl_model = m.group(1) if m else session.agent_configs.get("organizer", {}).get("model", "")
+                tried_models.add(rl_model)
+
+                next_model = _next_organizer_model(rl_model, tried_models)
+                if next_model:
+                    await manager.broadcast({"type": "error", "data": {
+                        "message": f"Rate limited on {rl_model} — retrying with {next_model}…"
+                    }})
+                    session.agent_configs["organizer"]["model"] = next_model
+                    await manager.broadcast({"type": "config_sync", "data": session.agent_configs["organizer"]})
+                    # Reset state cleanly and retry
+                    session.checkpointer = MemorySaver()
+                    session.graph = build_contest_graph(session.checkpointer, model=next_model)
+                    session.thread_id = "contest-1"
+                    session.config = {"configurable": {"thread_id": session.thread_id}, "recursion_limit": 200}
+                    session.message_history = []
+                    session.initial_state = make_initial_state(session.agent_configs)
+                    await manager.broadcast({"type": "history_sync", "data": []})
+                    continue  # retry the outer while loop with new model
+                else:
+                    await manager.broadcast({"type": "error", "data": {
+                        "message": "All fallback models are rate-limited. Please wait a moment and reset."
+                    }})
+                    break
+            else:
+                logger.exception("Graph error: %s", exc)
+                await manager.broadcast({"type": "error", "data": {"message": str(exc)}})
+                break
+
+        finally:
+            session.running = False
 
 
 # ── WebSocket endpoint ────────────────────────────────────────────────────────
