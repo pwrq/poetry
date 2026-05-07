@@ -75,6 +75,11 @@ class ContestSession:
             if saved_user:
                 self.agent_configs["user"] = saved_user
             self.judging_mode = saved_mode
+            # Rebuild graph with the preserved organizer model — _init() used the default
+            self.graph = build_contest_graph(
+                self.checkpointer,
+                model=self.agent_configs["organizer"]["model"],
+            )
             self.initial_state = make_initial_state(self.agent_configs)
             self.initial_state["judging_mode"] = saved_mode
 
@@ -141,8 +146,26 @@ async def run_graph():
     except asyncio.CancelledError:
         pass
     except Exception as exc:
-        logger.exception("Graph error: %s", exc)
-        await manager.broadcast({"type": "error", "data": {"message": str(exc)}})
+        error_str = str(exc)
+        if "429" in error_str:
+            import re as _re
+            m = _re.search(r"([\w/.\-:]+(?::free)?)\s+is temporarily rate.limited", error_str)
+            rl_model = m.group(1) if m else "the current model"
+            fallback = settings.default_model
+            org = session.agent_configs.get("organizer", {})
+            if org.get("model", "") == rl_model:
+                org["model"] = fallback
+                await manager.broadcast({"type": "config_sync", "data": org})
+            await manager.broadcast({"type": "error", "data": {
+                "message": (
+                    f"Rate limited on {rl_model}. "
+                    f"Romano switched to {fallback}. "
+                    f"Reset and start again."
+                )
+            }})
+        else:
+            logger.exception("Graph error: %s", exc)
+            await manager.broadcast({"type": "error", "data": {"message": str(exc)}})
     finally:
         session.running = False
 
