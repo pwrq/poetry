@@ -1,0 +1,351 @@
+/* ── Scoreboard ───────────────────────────────────────────────── */
+.scoreboard {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 16px 8px;
+}
+
+.scoreboard--collapsed {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 6px 16px;
+  gap: 0;
+}
+.scoreboard--collapsed:hover {
+  background: var(--border-light);
+}
+
+.scoreboard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.scoreboard__toggle {
+  font-size: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: underline;
+}
+.scoreboard__toggle:hover {
+  color: var(--text);
+}
+
+.scoreboard__table-wrap {
+  overflow-x: auto;
+}
+
+.scoreboard__table {
+  border-collapse: collapse;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.scoreboard__th {
+  text-align: left;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.scoreboard__th--round {
+  text-align: center;
+  color: var(--text);
+}
+
+.scoreboard__th--cat {
+  text-align: center;
+  font-size: 10px;
+  padding: 1px 5px;
+}
+
+.scoreboard__row:hover td {
+  background: var(--border-light);
+}
+
+.scoreboard__name {
+  font-weight: 700;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.scoreboard__cell {
+  text-align: center;
+  padding: 2px 5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.scoreboard__cell--sum {
+  color: var(--text);
+  font-weight: 600;
+  border-left: 1px solid var(--border);
+}
+
+.scoreboard__cell--total {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 12px;
+  border-left: 1px solid var(--border);
+}
+
+/* ── Agent panel ──────────────────────────────────────────────── */
+.agent-panel {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.agent-card {
+  flex: 0 0 auto;
+  min-width: 110px;
+  max-width: 170px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-top-width: 3px;
+}
+
+.agent-card__name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-card__role {
+  font-size: 9px;
+  text-transform: capitalize;
+  opacity: 0.7;
+  margin-bottom: 3px;
+}
+
+.agent-card__controls {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Persona / rename button (shared) ────────────────────────── */
+.btn-personality {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.btn-personality:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ── Message feed (single scrolling area) ────────────────────── */
+.message-feed {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Feed bubble ──────────────────────────────────────────────── */
+.feed-bubble {
+  border-left: 3px solid;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: var(--surface);
+  width: 100%;
+}
+
+.feed-bubble--judges-only {
+  opacity: 0.7;
+}
+
+.feed-bubble--organizer-only {
+  opacity: 0.85;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.feed-bubble--handover {
+  background: rgba(245, 158, 11, 0.07);
+  border-left-width: 4px;
+}
+
+.feed-bubble__handover-badge {
+  font-size: 9px;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.feed-bubble__header {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.feed-bubble__from {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 10px;
+}
+
+.feed-bubble__arrow {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.feed-bubble__to {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.feed-bubble__judges-badge {
+  font-size: 9px;
+  color: var(--judge-accent);
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+.feed-bubble__time {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.feed-bubble__body {
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+.feed-bubble__body--collapsed {
+  max-height: 80px;
+  overflow: hidden;
+}
+
+/* Expand button (shared with old ChatBubble) */
+.bubble-expand {
+  font-size: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  margin-top: 2px;
+  text-decoration: underline;
+  text-align: left;
+}
+.bubble-expand:hover {
+  color: var(--text);
+}
+
+/* @mention highlight */
+.mention {
+  color: var(--mention);
+  font-weight: 600;
+}
+
+/* ── Full-width user input bar (pinned at bottom) ─────────────── */
+.user-input-bar {
+  flex-shrink: 0;
+  border-top: 2px solid var(--user-accent);
+  background: var(--surface);
+}
+
+/* User input area */
+.user-input-area {
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.user-input-area textarea {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 8px;
+  resize: none;
+  min-height: 40px;
+  max-height: 120px;
+  font-family: inherit;
+}
+
+.user-input-area textarea:focus {
+  outline: none;
+  border-color: var(--user-accent);
+}
+
+.user-input-area button {
+  flex-shrink: 0;
+  background: var(--user-accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 7px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  align-self: flex-end;
+}
+.user-input-area button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mention-target-select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 3px 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mention-target-select:focus {
+  outline: none;
+  border-color: var(--user-accent);
+}
+.mention-target-select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -1,0 +1,47 @@
+# Keep Docker build context small and safe
+# Only scripts/, docker/ and config/ are needed at build time
+
+# Secrets — never send to Docker daemon
+.env
+keys/
+vpn/
+simplex-state/
+
+# Git
+.git
+.gitignore
+.dockerignore
+
+# Docs
+README.md
+LICENSE
+docker-compose.yml
+.env.example
+
+# Logs — bind-mounted at runtime, not needed at build
+logs/
+
+# Claude Code
+.claude/
+
+# Project data — bind-mounted at runtime, not needed at build
+projects/*/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
